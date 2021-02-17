@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<!-- for reference, see:
+  -- https://dev.to/luispa/lets-try-react-without-nodejs-3a7
+  -- https://reactjs.org/docs/hello-world.html
+  -->
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>React Local</title>
+  <script type="application/javascript" src="https://unpkg.com/react@16.0.0/umd/react.development.js"></script>
+  <script type="application/javascript" src="https://unpkg.com/react-dom@16.0.0/umd/react-dom.development.js"></script>
+  <script type="application/javascript" src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+
+  <!-- your custom CSS goes here: -->
+  <style>
+    em{font-weight: bolder}
+  </style>
+
+  <!-- Maybe you want to use bootstrap to make it pretty? -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+  <script crossorigin type="text/babel">
+  const exampleArticle = {
+    title: "Article Title",
+    url: "www.google.com",
+    txt: "This is example article text content. Inside of it, I is will include random instances of the string \"is\". This is so that I can test the replacement is of text inside of a longer string. This is example article text content. Inside of it, I is will include random instances of the string \"is\". This is so that I can test the replacement is of text inside of a longer string. This is example article text content. Inside of it, I is will include random instances of the string \"is\". This is so that I can test the replacement is of text inside of a longer string."
+  }
+
+  const rootElement = document.getElementById('root')
+  let placeHolderArticles = [1,2,3,4,5,6,7,8,9,10];
+
+  // Component to render individual articles
+  class ArticleRow extends React.Component{
+    constructor(props){
+      super(props);
+      this.title = props.article.title;
+      this.url = props.article.url;
+      this.text = props.article.txt;
+      this.queryRegExes = props.queryWords.filter((queryWord) => queryWord != "").map((queryWord) => new RegExp(queryWord, "i"));
+      this.id = 0;
+    }
+
+    getHighlightedText(){
+      console.log("Title: " + this.title);
+
+      const lowerText = this.text.toLowerCase();
+      // Get substring with words to highlight and display
+      let queryIndex = Number.MAX_VALUE;
+      this.queryRegExes
+        .map((regex) => {
+          const wordIndex = lowerText.search(regex)
+          if (wordIndex >= 0) queryIndex = Math.min(queryIndex, wordIndex);
+          console.log("Q: " + regex + " -- I: " + wordIndex);
+        });
+      
+      // Move start index back to give context to the word
+      queryIndex = Math.max(queryIndex-25, 0);
+
+      console.log("Query Index: " + queryIndex);
+
+      // Extract text segment to display
+      let displayText = queryIndex > 0
+        ? "..." + this.text.substring(queryIndex, queryIndex + 600) + "..."
+        : this.text.substring(queryIndex, queryIndex + 600) + "...";
+
+      return displayText.split(" ");
+    }
+
+    render () {
+      console.log("================");
+      return (
+      <div style={{padding: 3, marginTop: 25, width: 1200}}>
+        <b>{this.title}</b>
+        <p><a href={this.url} >{this.url}</a></p>
+        {
+          this.getHighlightedText().map((word) => {
+            if (this.queryRegExes.some((regex) => word.search(regex) >= 0)){
+              return <i id={this.id++} ><span id={this.id++} style={{backgroundColor: "yellow"}} >{word}</span> </i>;
+            } else {
+              return <i id={this.id++} >{word} </i>;
+            }
+          })
+        }
+      </div>
+      );
+    }
+  }
+
+  function LoadMoreResults(props) {
+    if (props.render){
+      return (
+        <div style={{display: "flex", justifyContent: "center"}} >
+          <p
+          style={{cursor: "pointer", fontSize: 25, color: "white", backgroundColor: "#0398fc", textAlign: "center", borderRadius: "15px", borderStyle: "solid", width: 250}} 
+          onClick={() => props.loadMoreResults()} >
+            Load More Results
+          </p>
+        </div>
+      );
+    } else {
+      return null;
+    }
+
+  }
+
+  class SearchApp extends React.Component {
+    constructor(props) {
+      super(props);
+
+      // Form state 
+      this.query = "";
+      this.date = "";
+      this.lang = "";
+      this.offset = 0;
+      this.id = 0;
+
+      // Initialize UI state
+      this.state = {
+        searchResults: [],
+        moreResults: false
+      }
+    }
+
+    // Builds the query string and returns the fetched data
+    getQueryString() {
+      // Build query string
+      let queryString = `query=${this.query}&offset=${this.offset}`;
+      if (this.date != "") queryString += `&date=${this.date}`;
+      if (this.lang != "") queryString += `&language=${this.lang}`;
+
+      // DEBUG
+      console.log("Query String: " + queryString);
+      
+      return queryString;
+    }
+
+
+
+    // Called on form update - updates state of search results array and more results bool
+    queryBackEnd() {
+      console.log("Querying backend");
+      if (this.query == "") {
+        this.setState({
+          searchResults: [],
+          moreResults: false
+        });
+      }
+
+      // Execute fetch
+      fetch(`http://cholomanliveson-env.eba-32wudb7s.us-east-2.elasticbeanstalk.com/api/search?${this.getQueryString()}`)
+        .then(response => response.json())
+        .then(articleResponse => {
+          //console.log("Got response: " + JSON.stringify(articles[0]));
+          // Determine if there are more results in the query
+          const moreResults = this.offset + articleResponse.returned_results < articleResponse.total_results;
+          console.log("================RECEIVED RESULTS===========")
+          // New query
+          if (this.offset == 0){
+            this.setState({
+              searchResults: articleResponse.articles,
+              moreResults: moreResults
+            });
+          
+          // Extend query results
+          } else {
+            this.setState({
+              searchResults: this.state.searchResults.concat(articleResponse.articles),
+              moreResults: moreResults
+            });
+          }
+        })
+        .catch(() => {
+          console.log("ERROR");
+          this.setState({
+            searchResults: [],
+            moreResults: false
+          });
+        });
+    }
+
+    render() {      
+      return (
+        <div style={{padding: 10, flexDirection: "vertical"}}>
+          <h1>Foogle!</h1>
+          <div style={{paddingBottom: 10, borderBottom: "groove", borderColor: "#cccccc"}} >
+            <div>
+              <label style={{width: 140}} >Search Query</label>
+              <input type="search" id="searchQuery" onChange={(event) => {this.query = event.target.value; this.offset = 0; this.queryBackEnd()}}/>
+            </div>
+            <div>
+              <label style={{width: 140}} >Language Code</label>
+              <input type="search" id="languageFilter" onChange={(event) => {this.lang = event.target.value; this.offset = 0; this.queryBackEnd()}}  />
+            </div>
+            <div>
+              <label style={{width: 140}} >Date</label>
+              <input type="date" id="dateFilter" onChange={(event) => {this.date = event.target.value; this.offset = 0; this.queryBackEnd()}} />
+            </div>
+          </div>
+          {
+            this.state.searchResults.map((article) => 
+              <ArticleRow key={this.id++} queryWords={this.query.toLowerCase().split(" ")} article={article} />)
+          }
+          <LoadMoreResults render={this.state.moreResults} loadMoreResults={() => {this.offset += 10; this.queryBackEnd()}} />
+        </div>
+      );
+    }
+  }
+
+  // Use the ReactDOM.render to show your component on the browser
+  ReactDOM.render(
+    <SearchApp />,
+    rootElement
+  )
+</script>
+
+</body>
+
+</html>
