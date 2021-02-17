@@ -181,8 +181,8 @@
             });
           }
         })
-        .catch(() => {
-          console.log("ERROR");
+        .catch((e) => {
+          console.log(e);
           this.setState({
             searchResults: [],
             moreResults: false
